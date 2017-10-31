@@ -1,0 +1,130 @@
+#!/usr/bin/tclsh
+package require Tclx
+package require fuse
+
+proc allexec {dir} {
+    set execpaths [list]
+    set e [glob -nocomplain -directory $dir -type f * .*]
+    foreach v $e {
+	if {[file executable $v]} {lappend execpaths $v}
+    }
+    set execpaths
+}
+
+set execdir [lindex $argv 0]
+set execpaths [allexec $execdir]
+set basenames [lmap p $execpaths {exec basename $p}]
+set inbufs [lrepeat [llength $execpaths] {}]
+set outbufs [lrepeat [llength $execpaths] {}]
+
+proc outsizes {} {
+    global outbufs
+    return [lmap v $outbufs { string length $v }]
+}
+
+# I assume path be like '/foo.sh'
+proc v2bname {vname} { return [string range $vname 1 end] }
+
+proc Getattr {context path} {
+    global basenames
+    if {$path eq "/"} { return [dict create type directory mode 0755 nlinks 2] }
+    set bname [v2bname $path];
+    set bnameidx [lsearch $basenames $bname]
+    if {$bnameidx ne -1} {
+	return [dict create mode 0666 nlinks 1 size [lindex [outsizes] $bnameidx]]
+    } else {
+        return -code error -errorcode [list POSIX ENOENT {}]
+    }
+    return ;  # use default stat
+}
+
+proc Open {context path fileinfo} {
+    global basenames
+    if {[lsearch $basenames [v2bname $path]] eq -1} {
+        return -code error -errorcode [list POSIX ENOENT {}]
+    }
+    ## RDWR makes no sense in our design?
+    if {"RDWR" in [dict get $fileinfo flags]} {
+	puts "Rejected open() because of RDWR request. We only accept RDONLY and WRONLY"
+        return -code error -errorcode [list POSIX EACCES {}]
+    }
+
+    return ;# must be explicit. if a number is returned, then it becomes the file descriptor.
+}
+
+proc Readdir {context path fileinfo} {
+    global basenames
+    if {$path ne "/"} {
+        return -code error -errorcode [list POSIX ENOENT {}]
+    }
+    return [concat [list "." ".." ] $basenames]
+}
+
+proc Read {context path fileinfo size offset} {
+    global basenames outbufs
+    set bname [v2bname $path];
+    set bnameidx [lsearch $basenames $bname]
+    set this_outbuf [lindex $outbufs $bnameidx]
+
+    if {$bnameidx eq -1} {
+        return -code error -errorcode [list POSIX ENOENT {}]
+    }
+
+    set len [string length $this_outbuf]
+    if {$offset < $len} {
+        if {$offset + $size > $len} {  set size $len  }
+        return [string range $this_outbuf $offset $size]
+    }
+    return
+}
+
+proc maybe_consume {buf command} {
+}
+
+proc Write {context path fileinfo data offset} {
+    global basenames outbufs inbufs execpaths
+    set bname [v2bname $path]
+    set bnameidx [lsearch $basenames $bname]
+    set this_inbuf [lindex $inbufs $bnameidx]
+    set this_execpath [lindex $execpaths $bnameidx]
+    if {$bnameidx eq -1} {
+        return -code error -errorcode [list POSIX ENOENT {}]
+    }
+    ## offset is ignored since we suppose the files are non-seekable
+    ## set this_inbuf [exec -keepnewline $this_execpath]'
+    set this_inbuf $this_inbuf$data
+
+    set inlist [split $this_inbuf "\0"]
+    if {[llength $inlist] > 1} {
+	set reslist [lmap v [lrange $inlist 0 end-1] { exec $this_execpath << $v }]
+	lset inbufs $bnameidx [lindex $inlist end]
+	lset outbufs $bnameidx [lindex $reslist end]
+    } else {
+	lset inbufs $bnameidx $this_inbuf
+    }
+    puts "Inbuf: $inbufs"
+    puts "Outbuf: $outbufs"
+    return [string length $data]
+}
+
+
+
+set mntdir [lindex $argv 1]
+fuse create fusehorse -getattr Getattr -readdir Readdir -open Open -read Read -write Write
+fusehorse $mntdir -o nonempty -o uid=[id userid] -o gid=[id groupid] -o intr -o intr_signal=10
+## use 'rename fusehorse {}' to unmount.
+
+rename exit __shock
+proc exit {{status 0}} {
+    puts "Unmounting FUSE."
+    if {[llength [info commands fusehorse]] > 0} {
+	rename fusehorse {}
+    }
+    __shock $status
+}
+signal trap SIGINT exit
+signal trap SIGTERM exit
+    
+set forever 0
+vwait forever
+__shock 0
