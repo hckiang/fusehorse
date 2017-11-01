@@ -27,6 +27,12 @@ Requirement
 * tcl-fuse 1.1   (https://sourceforge.net/projects/tcl-fuse/)
 
 
+Installation
+------------
+
+Just put the script into your path
+
+
 Example
 -------
 
@@ -58,3 +64,14 @@ appending bytes to a file, and `>` will tries to create a file and overwrite.
 Files in our virtual directory here are 'streams' so there are nothing for you
 to overwrite.
 
+
+Author
+------
+
+Haochi Kiang <hckiang@posteo.se>
+
+
+License
+-------
+
+This software is under GPLv3.
