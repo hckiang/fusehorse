@@ -46,6 +46,8 @@ Example
         echo "\n"
     $ mkdir mnt
     $ fusehorse srcdir mnt
+    $ ls mnt
+        hello.sh          # Because only hello.sh is executable
 
 This will cause a FUSE fs to be mounted on `mnt/`. In another terminal:
 
