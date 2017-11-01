@@ -1,4 +1,5 @@
 #!/usr/bin/tclsh
+
 package require Thread
 package require Tclx
 package require fuse
@@ -84,7 +85,6 @@ proc _write {context path fileinfo data offset} {
     set bnameidx [lsearch $basenames [v2bname $path]]
     set this_inbuf [lindex $inbufs $bnameidx]
     set this_execpath [lindex $execpaths $bnameidx]
-    logmsg "_write() called with data length = [string length $data] offset = $offset"
     if {$bnameidx eq -1} {
         return -code error -errorcode [list POSIX ENOENT {}]
     }
