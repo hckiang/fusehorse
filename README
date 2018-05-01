@@ -36,7 +36,7 @@ Just put the script into your path
 Example
 -------
 
-    $ ls srcdir/
+    $ ls srcdir/          # A dir containing source codes
         dummydir/  dummyfile.txt  hello.sh*
     $ cat hello.sh
         #!/bin/sh
@@ -45,11 +45,12 @@ Example
         cat </dev/stdin
         echo "\n"
     $ mkdir mnt
-    $ fusehorse srcdir mnt
+    $ fusehorse srcdir mnt  # After this, executables in srcdir will be mapped  to mnt/
     $ ls mnt
-        hello.sh          # Because only hello.sh is executable
+        hello.sh          # Only executable files in srcdir/ will show up here
 
-This will cause a FUSE fs to be mounted on `mnt/`. In another terminal:
+The above mounts a FUSE fs on `mnt/`. Now we can try playing a bit with the 'magic file' mnt/hello.sh.
+In another terminal:
 
     $ echo -ne "horsey\0" >> mnt/hello.sh    # Finishes immediately
     $ cat mnt/hello.sh                       # Empty because the program hasn't exited
@@ -57,14 +58,14 @@ This will cause a FUSE fs to be mounted on `mnt/`. In another terminal:
     $ cat mnt/hello.sh
     $ cat mnt/hello.sh
         Hello horsey
-    $ cat mnt/hello.sh                       # Will be the same forever unless you call
+    $ cat mnt/hello.sh                       # Will be the same forever until you call the program again
         Hello horsey
 
 Note that you have to use `>>` instead of `>`, otherwise you will get error.
 This is a design instead of a bug: in the Unix tradition `>>` means simply
-appending bytes to a file, and `>` will tries to create a file and overwrite.
-Files in our virtual directory here are 'streams' so there are nothing for you
-to overwrite.
+appending bytes to a file, and `>` means creating a file and overwrite.
+Since files in our virtual directory here are inherently 'streams', so there
+are nothing for you to overwrite, thus the `>` operator does not really make sense.
 
 
 Author
