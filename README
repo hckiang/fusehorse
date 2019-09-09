@@ -14,7 +14,7 @@ What it does:
   except saving it to a buffer until it sees a "\0" (NULL byte). A
   NULL byte triggers a program execution, and all data before the
   NULL byte will be input to the programs' stdin. Any subsequent bytes
-  will be processed in the same manner, therefore if its input has three
+  will be processed in the same manner. Therefore if its input has three
   NULL bytes the program will be executed three times.
 * Reading a virtual file always gives the result of the last execution.
   Before the first execution the files are empty.
@@ -64,8 +64,8 @@ In another terminal:
 Note that you have to use `>>` instead of `>`, otherwise you will get error.
 This is a design instead of a bug: in the Unix tradition `>>` means simply
 appending bytes to a file, and `>` means creating a file and overwrite.
-Since files in our virtual directory here are inherently 'streams', so there
-are nothing for you to overwrite, thus the `>` operator does not really make sense.
+Since files in our virtual directory here are inherently 'streams', there
+are nothing for you to overwrite: so `>` operator does not really make sense.
 
 
 Author
